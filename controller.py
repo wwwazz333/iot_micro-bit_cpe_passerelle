@@ -11,7 +11,7 @@ import threading
 import json 
 
 
-HOST           = "localhost"  # The server's hostname or IP address²
+HOST           = "192.168.1.110"  # The server's hostname or IP address²
 UDP_PORT       = 10000
 MICRO_COMMANDS = ["TL" , "LT"]
 FILENAME        = "values.json"
@@ -29,10 +29,10 @@ class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
         if data != "":
                         if data in MICRO_COMMANDS: # Send message through UART
                                 sendUARTMessage(data)
-                                
-                        elif data == "getValues()": # Sent last value received from micro-controller
+                        if data == "ping":
+                                socket.sendto("pong".encode(), self.client_address) 
+                        elif data == "getValues()": 
                                 socket.sendto(json.dumps(DATA_MEASUREMENT, indent=4).encode(), self.client_address) 
-                                # TODO: Create last_values_received as global variable      
                         else:
                                 print("Unknown message: ",data)
 
@@ -116,7 +116,7 @@ if __name__ == '__main__':
                                                 print("Invalid data received", splited)
                                                 continue
 
-                                        DATA_MEASUREMENT[splited[0]] = splited[1]
+                                        DATA_MEASUREMENT[splited[0]] = json.loads(splited[1])
                                         writeToFile()
         except (KeyboardInterrupt, SystemExit):
                 server.shutdown()

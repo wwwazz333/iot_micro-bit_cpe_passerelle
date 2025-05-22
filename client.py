@@ -6,7 +6,7 @@ msgFromClient       = "getValues()"
 
 bytesToSend         = msgFromClient.encode()
 
-serverAddressPort   = ("localhost", 10000)
+serverAddressPort   = ("192.168.1.110", 10000)
 
 bufferSize          = 1024
 
