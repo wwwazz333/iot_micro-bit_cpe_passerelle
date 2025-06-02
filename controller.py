@@ -25,21 +25,30 @@ ORDER_DISPLAY = {} # ID:TLHP
 
 
 def logger(*msg: object):
-    print("[{}] {}".format(time.strftime("%Y-%m-%d %H:%M:%S"), " ".join(str(m) for m in msg)))
+    the_log = "[{}] {}".format(time.strftime("%d-%m-%Y %H:%M:%S"), " ".join(str(m) for m in msg))
+    print(the_log)
+    with open("log.txt", "a+") as log_file:
+           log_file.write(the_log + "\n")
 
 def save(data, filename):
        f= open(filename,"w")
        f.write(json.dumps(data, indent=4))
        f.close()
 def loadFromFile(filename):
-        f= open(filename,"r")
         loaded_values = {}
         try:
-                loaded_values = json.loads(f.read())
-        except:
-                print("File not found or empty, creating new file")
+                with open(filename, "r") as f:
+                        loaded_values = json.loads(f.read())
+        except FileNotFoundError:
+                logger("File not found, creating new file : ", filename)
+                with open(filename, "w") as f:
+                        f.write(json.dumps({}))
                 loaded_values = {}
-        f.close()
+        except Exception:
+                logger("File empty or invalid, resetting file : ", filename)
+                with open(filename, "w") as f:
+                        f.write(json.dumps({}))
+                loaded_values = {}
         return loaded_values
 def writeToFileOrder():
         save(ORDER_DISPLAY, FILENAME_ORDER)
@@ -131,7 +140,7 @@ if __name__ == '__main__':
         initUART()
         loadFromFileMeasurement()
         loadFromFileOrder()
-        logger ('Press Ctrl-C to quit.')
+        print ('Press Ctrl-C to quit.')
 
         server = ThreadedUDPServer((HOST, UDP_PORT), ThreadedUDPRequestHandler)
 
