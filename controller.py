@@ -13,13 +13,11 @@ import json
 
 HOST           = "192.168.1.110"  # The server's hostname or IP address²
 UDP_PORT       = 10000
-MICRO_COMMANDS = ["TL" , "LT"]
+
 FILENAME_MEASUREMENT        = "values.json"
 FILENAME_ORDER        = "orders.json"
-LAST_VALUE      = ""
 
-DATA_MEASUREMENT = {}
-
+DATA_MEASUREMENT = {} # ID: { "T": temperature, "L": light, "H": humidity, "P": pressure }
 ORDER_DISPLAY = {} # ID:TLHP
 
 
@@ -140,6 +138,7 @@ if __name__ == '__main__':
         initUART()
         loadFromFileMeasurement()
         loadFromFileOrder()
+        last_value = ""
         print ('Press Ctrl-C to quit.')
 
         server = ThreadedUDPServer((HOST, UDP_PORT), ThreadedUDPRequestHandler)
@@ -155,12 +154,12 @@ if __name__ == '__main__':
                         if (ser.inWaiting() > 0): # if incoming bytes are waiting 
                                 data_bytes = ser.read(ser.inWaiting())
                                 data_str = data_bytes.decode()
-                                LAST_VALUE += str(data_str)
+                                last_value += str(data_str)
 
-                                if '\n' in LAST_VALUE:
+                                if '\n' in last_value:
                                         
-                                        splited = LAST_VALUE.split("=")
-                                        LAST_VALUE = ""
+                                        splited = last_value.split("=")
+                                        last_value = ""
                                         if len(splited) != 2:
                                                 logger("Invalid data received", splited)
                                                 continue
