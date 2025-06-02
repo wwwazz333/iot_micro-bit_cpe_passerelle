@@ -2,7 +2,7 @@ import socket
 
  
 
-msgFromClient       = "getValues()"
+msgFromClient       = "0000006431364647:HPTL"
 
 bytesToSend         = msgFromClient.encode()
 

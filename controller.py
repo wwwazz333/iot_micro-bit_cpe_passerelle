@@ -19,7 +19,17 @@ LAST_VALUE      = ""
 
 DATA_MEASUREMENT = {}
 
+ORDER_DISPLAY = {} # ID:TLHP
+
+
 class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
+    
+    def _is_change_order_action(self, data):
+        must_containe_each = [":", "T", "L", "H", "P"]
+        for item in must_containe_each:
+            if item not in data:
+                return False
+        return True and len(data) == 16+5 # 5 characters for command and 16 for the id
 
     def handle(self):
         data = self.request[0].strip().decode()
@@ -27,9 +37,9 @@ class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
         current_thread = threading.current_thread()
         print("{}: client: {}, wrote: {}".format(current_thread.name, self.client_address, data))
         if data != "":
-                        if data in MICRO_COMMANDS: # Send message through UART
-                                sendUARTMessage(data)
-                        if data == "ping":
+                        if self._is_change_order_action(data): # Send message through UART
+                                ORDER_DISPLAY[data[:16]] = data[17:] # save order in display
+                        elif data == "ping":
                                 socket.sendto("pong".encode(), self.client_address) 
                         elif data == "getValues()": 
                                 socket.sendto(json.dumps(DATA_MEASUREMENT, indent=4).encode(), self.client_address) 
@@ -70,8 +80,14 @@ def initUART():
 
 
 def sendUARTMessage(msg):
-    ser.write(msg.encode())
+    ser.write((msg+"\n").encode())
     print("Message <" + msg + "> sent to micro-controller." )
+
+def send_back_to_microbit_ordrer(id):
+        if id in ORDER_DISPLAY.keys():
+                sendUARTMessage(ORDER_DISPLAY[id])
+        else:
+               sendUARTMessage("")
 
 def writeToFile():
         f= open(FILENAME,"w")
@@ -109,7 +125,7 @@ if __name__ == '__main__':
                                 LAST_VALUE += str(data_str)
 
                                 if '\n' in LAST_VALUE:
-                        
+                                        
                                         splited = LAST_VALUE.split("=")
                                         LAST_VALUE = ""
                                         if len(splited) != 2:
@@ -118,6 +134,8 @@ if __name__ == '__main__':
 
                                         DATA_MEASUREMENT[splited[0]] = json.loads(splited[1])
                                         writeToFile()
+                                        send_back_to_microbit_ordrer(splited[0])
+                                        # sendUARTMessage("test")
         except (KeyboardInterrupt, SystemExit):
                 server.shutdown()
                 server.server_close()
