@@ -22,6 +22,11 @@ DATA_MEASUREMENT = {}
 
 ORDER_DISPLAY = {} # ID:TLHP
 
+
+
+def logger(*msg: object):
+    print("[{}] {}".format(time.strftime("%Y-%m-%d %H:%M:%S"), " ".join(str(m) for m in msg)))
+
 def save(data, filename):
        f= open(filename,"w")
        f.write(json.dumps(data, indent=4))
@@ -39,13 +44,14 @@ def loadFromFile(filename):
 def writeToFileOrder():
         save(ORDER_DISPLAY, FILENAME_ORDER)
 def loadFromFileOrder():
+        global ORDER_DISPLAY
         ORDER_DISPLAY = loadFromFile(FILENAME_ORDER)
-        
         return ORDER_DISPLAY
 
 def writeToFileMeasurement():
         save(DATA_MEASUREMENT, FILENAME_MEASUREMENT)
 def loadFromFileMeasurement():
+        global DATA_MEASUREMENT
         DATA_MEASUREMENT = loadFromFile(FILENAME_MEASUREMENT)
         return DATA_MEASUREMENT
 
@@ -63,7 +69,7 @@ class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
         data = self.request[0].strip().decode()
         socket = self.request[1]
         current_thread = threading.current_thread()
-        print("{}: client: {}, wrote: {}".format(current_thread.name, self.client_address, data))
+        logger("{}: client: {}, wrote: {}".format(current_thread.name, self.client_address, data))
         if data != "":
                         if self._is_change_order_action(data): # Send message through UART
                                 ORDER_DISPLAY[data[:16]] = data[17:] # save order in display
@@ -73,7 +79,7 @@ class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
                         elif data == "getValues()": 
                                 socket.sendto(json.dumps(DATA_MEASUREMENT, indent=4).encode(), self.client_address) 
                         else:
-                                print("Unknown message: ",data)
+                                logger("Unknown message: ",data)
 
 class ThreadedUDPServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
     pass
@@ -99,18 +105,18 @@ def initUART():
         ser.rtscts = False     #disable hardware (RTS/CTS) flow control
         ser.dsrdtr = False       #disable hardware (DSR/DTR) flow control
         #ser.writeTimeout = 0     #timeout for write
-        print('Starting Up Serial Monitor')
+        logger('Starting Up Serial Monitor')
         try:
                 ser.open()
         except serial.SerialException:
-                print("Serial {} port not available".format(SERIALPORT))
+                logger("Serial {} port not available".format(SERIALPORT))
                 exit()
 
 
 
 def sendUARTMessage(msg):
     ser.write((msg+"\n").encode())
-    print("Message <" + msg + "> sent to micro-controller." )
+    logger("Message <" + msg + "> sent to micro-controller." )
 
 def send_back_to_microbit_ordrer(id):
         if id in ORDER_DISPLAY.keys():
@@ -125,7 +131,7 @@ if __name__ == '__main__':
         initUART()
         loadFromFileMeasurement()
         loadFromFileOrder()
-        print ('Press Ctrl-C to quit.')
+        logger ('Press Ctrl-C to quit.')
 
         server = ThreadedUDPServer((HOST, UDP_PORT), ThreadedUDPRequestHandler)
 
@@ -134,7 +140,7 @@ if __name__ == '__main__':
 
         try:
                 server_thread.start()
-                print("Server started at {} port {}".format(HOST, UDP_PORT))
+                logger("Server started at {} port {}".format(HOST, UDP_PORT))
                 while ser.isOpen() : 
                         # time.sleep(100)
                         if (ser.inWaiting() > 0): # if incoming bytes are waiting 
@@ -147,13 +153,12 @@ if __name__ == '__main__':
                                         splited = LAST_VALUE.split("=")
                                         LAST_VALUE = ""
                                         if len(splited) != 2:
-                                                print("Invalid data received", splited)
+                                                logger("Invalid data received", splited)
                                                 continue
 
                                         DATA_MEASUREMENT[splited[0]] = json.loads(splited[1])
                                         writeToFileMeasurement()
                                         send_back_to_microbit_ordrer(splited[0])
-                                        # sendUARTMessage("test")
         except (KeyboardInterrupt, SystemExit):
                 server.shutdown()
                 server.server_close()
