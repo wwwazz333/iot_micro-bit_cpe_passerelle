@@ -14,12 +14,40 @@ import json
 HOST           = "192.168.1.110"  # The server's hostname or IP address²
 UDP_PORT       = 10000
 MICRO_COMMANDS = ["TL" , "LT"]
-FILENAME        = "values.json"
+FILENAME_MEASUREMENT        = "values.json"
+FILENAME_ORDER        = "orders.json"
 LAST_VALUE      = ""
 
 DATA_MEASUREMENT = {}
 
 ORDER_DISPLAY = {} # ID:TLHP
+
+def save(data, filename):
+       f= open(filename,"w")
+       f.write(json.dumps(data, indent=4))
+       f.close()
+def loadFromFile(filename):
+        f= open(filename,"r")
+        loaded_values = {}
+        try:
+                loaded_values = json.loads(f.read())
+        except:
+                print("File not found or empty, creating new file")
+                loaded_values = {}
+        f.close()
+        return loaded_values
+def writeToFileOrder():
+        save(ORDER_DISPLAY, FILENAME_ORDER)
+def loadFromFileOrder():
+        ORDER_DISPLAY = loadFromFile(FILENAME_ORDER)
+        
+        return ORDER_DISPLAY
+
+def writeToFileMeasurement():
+        save(DATA_MEASUREMENT, FILENAME_MEASUREMENT)
+def loadFromFileMeasurement():
+        DATA_MEASUREMENT = loadFromFile(FILENAME_MEASUREMENT)
+        return DATA_MEASUREMENT
 
 
 class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
@@ -39,6 +67,7 @@ class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
         if data != "":
                         if self._is_change_order_action(data): # Send message through UART
                                 ORDER_DISPLAY[data[:16]] = data[17:] # save order in display
+                                writeToFileOrder()
                         elif data == "ping":
                                 socket.sendto("pong".encode(), self.client_address) 
                         elif data == "getValues()": 
@@ -89,24 +118,13 @@ def send_back_to_microbit_ordrer(id):
         else:
                sendUARTMessage("")
 
-def writeToFile():
-        f= open(FILENAME,"w")
-        f.write(json.dumps(DATA_MEASUREMENT, indent=4))
-        f.close()
-def loadFromFile():
-        f= open(FILENAME,"r")
-        try:
-                DATA_MEASUREMENT = json.loads(f.read())
-        except:
-                print("File not found or empty, creating new file")
-                DATA_MEASUREMENT = {}
-        f.close()
-        return DATA_MEASUREMENT
+
 
 # Main program logic follows:
 if __name__ == '__main__':
         initUART()
-        loadFromFile()
+        loadFromFileMeasurement()
+        loadFromFileOrder()
         print ('Press Ctrl-C to quit.')
 
         server = ThreadedUDPServer((HOST, UDP_PORT), ThreadedUDPRequestHandler)
@@ -133,7 +151,7 @@ if __name__ == '__main__':
                                                 continue
 
                                         DATA_MEASUREMENT[splited[0]] = json.loads(splited[1])
-                                        writeToFile()
+                                        writeToFileMeasurement()
                                         send_back_to_microbit_ordrer(splited[0])
                                         # sendUARTMessage("test")
         except (KeyboardInterrupt, SystemExit):
