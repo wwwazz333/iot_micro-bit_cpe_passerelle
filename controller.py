@@ -80,6 +80,7 @@ class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
         if data != "":
                         if self._is_change_order_action(data): # Send message through UART
                                 ORDER_DISPLAY[data[:16]] = data[17:] # save order in display
+                                logger("Change order for ID {}: {}".format(data[:16], data[17:]))
                                 writeToFileOrder()
                         elif data == "ping":
                                 socket.sendto("pong".encode(), self.client_address) 
