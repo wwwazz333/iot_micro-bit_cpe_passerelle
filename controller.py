@@ -165,6 +165,7 @@ if __name__ == '__main__':
                                                 continue
 
                                         DATA_MEASUREMENT[splited[0]] = json.loads(splited[1])
+                                        logger(splited[0], "-->", DATA_MEASUREMENT[splited[0]])
                                         writeToFileMeasurement()
                                         send_back_to_microbit_ordrer(splited[0])
         except (KeyboardInterrupt, SystemExit):
